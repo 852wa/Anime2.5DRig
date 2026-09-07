@@ -9,6 +9,10 @@
 <body>
 <header>
   <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><h1>Anime2.5DRig</h1><span>2.5D AVATAR STUDIO</span></div></div>
+  <div class="sample-actions" role="group" aria-label="サンプルを読み込む">
+    <button class="btn" data-sample="A" title="sample2.psd を読み込む">サンプルA</button>
+    <button class="btn" data-sample="B" title="sample.psd を読み込む">サンプルB</button>
+  </div>
   <span id="modelName">モデル未読込</span>
   <div class="header-actions"><button class="btn primary" id="btnOpen">PSDを開く</button><button class="btn" id="btnPause" data-model-action disabled aria-pressed="false">一時停止</button><button class="btn" id="btnPng" data-model-action disabled>PNG保存</button><button class="btn" id="btnReadme">使い方</button></div>
 </header>
@@ -25,7 +29,8 @@
       <p class="drop-hint">RGB / 8bit PSD・128MBまで<br>レイヤー名は face / eyewhite / mouth_open など。フォルダにも対応。</p>
       <div class="btns" style="justify-content:center">
         <button class="btn primary" id="btnFile">PSDファイルを選ぶ</button>
-        <button class="btn" id="btnSample">sample.psd を読み込む</button>
+        <button class="btn" data-sample="A" title="sample2.psd を読み込む">サンプルAを読み込む</button>
+        <button class="btn" data-sample="B" title="sample.psd を読み込む">サンプルBを読み込む</button>
         <button class="btn" id="btnReadme2">READMEを読む</button>
       </div>
       <p id="dropStatus"></p>

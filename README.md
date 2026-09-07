@@ -12,7 +12,7 @@
    python -m http.server 8000
    # → http://localhost:8000
    ```
-2. ページを開き、パーツ分けPSDをドロップ（または「sample.psd を読み込む」）。
+2. ページを開き、パーツ分けPSDをドロップ、または「サンプルAを読み込む」「サンプルBを読み込む」を選択。Aは `sample2.psd`、Bは `sample.psd` です。左上の「サンプルA」「サンプルB」から、読み込み後もいつでも切り替えられます。
 3. 自動リグが走り、その場でアイドルモーション・まばたき・口パク・髪物理付きで動きます。
 
 ## 編集と保存
@@ -108,7 +108,8 @@ lib/ag-psd.min.js  PSDパーサ（ag-psd, MIT）
 lib/genericparts.js  汎用閉じ目・閉じ口差分（内蔵フォールバック）
 eye_close.psd    閉じ目差分の元絵（任意・差し替え可）
 mouth_close.psd  閉じ口差分の元絵（任意・差し替え可）
-sample.psd      サンプルモデル（各自で配置）
+sample2.psd     サンプルA
+sample.psd      サンプルB（OBS専用表示の初期モデル）
 obs_server.py   ローカル配信・OBSへの追跡値中継
 tests/          Node・Python・ブラウザの回帰テスト
 ```
