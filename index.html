@@ -3,107 +3,138 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="パーツ分けPSDをドロップするだけで、自動リギングされて動き出す2.5Dアバターツール">
 <title>Anime2.5DRig — PSDドロップで動くアバター</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23421827'/%3E%3Ctext x='16' y='23' font-size='20' font-family='sans-serif' font-weight='800' text-anchor='middle' fill='%23ff9cb0'%3EA%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="lib/app.css">
 </head>
 <body>
 <header>
-  <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><h1>Anime2.5DRig</h1><span>2.5D AVATAR STUDIO</span></div></div>
+  <div class="brand"><span class="brand-mark" aria-hidden="true">A</span><div><h1>Anime2.5DRig</h1><span>2.5D AVATAR STUDIO · <span id="appVersion">v2.0</span></span></div></div>
   <div class="sample-actions" role="group" aria-label="サンプルを読み込む">
-    <button class="btn" data-sample="A" title="sample2.psd を読み込む">サンプルA</button>
-    <button class="btn" data-sample="B" title="sample.psd を読み込む">サンプルB</button>
+    <button class="btn" type="button" data-sample="A" title="sample2.psd を読み込む">サンプルA</button>
+    <button class="btn" type="button" data-sample="B" title="sample.psd を読み込む">サンプルB</button>
   </div>
   <span id="modelName">モデル未読込</span>
-  <div class="header-actions"><button class="btn primary" id="btnOpen">PSDを開く</button><button class="btn" id="btnPause" data-model-action disabled aria-pressed="false">一時停止</button><button class="btn" id="btnPng" data-model-action disabled>PNG保存</button><button class="btn" id="btnReadme">使い方</button></div>
+  <button class="obs-chip" type="button" id="obsChip" hidden title="OBS連携の設定を開く">OBS</button>
+  <div class="header-actions">
+    <button class="btn primary" type="button" id="btnOpen" title="PSDを開く（Ctrl+O）">PSDを開く</button>
+    <div class="btn-group" role="group" aria-label="履歴">
+      <button class="btn icon" type="button" id="btnUndo" disabled title="元に戻す（Ctrl+Z）" aria-label="元に戻す">↶</button>
+      <button class="btn icon" type="button" id="btnRedo" disabled title="やり直す（Ctrl+Shift+Z）" aria-label="やり直す">↷</button>
+    </div>
+    <button class="btn" type="button" id="btnPause" data-model-action disabled aria-pressed="false" title="一時停止（Space）">一時停止</button>
+    <button class="btn" type="button" id="btnPng" data-model-action disabled title="現在のポーズを透過PNGで保存">PNG保存</button>
+    <button class="btn" type="button" id="btnRecord" data-model-action disabled title="モーションを動画で保存">録画</button>
+    <button class="btn" type="button" id="btnReadme">使い方</button>
+  </div>
 </header>
 <div id="main">
   <div id="stage" class="checker">
-    <canvas id="cv" aria-label="アバターのプレビュー"></canvas>
-    <div id="fps" aria-hidden="true"></div>
+    <div id="viewport">
+      <canvas id="cv" aria-label="アバターのプレビュー"></canvas>
+      <svg id="overlay" aria-hidden="true"></svg>
+    </div>
     <div id="stageLabel">PREVIEW <span>背景の市松模様は出力されません</span></div>
+    <div id="stageTools">
+      <span id="recBadge" hidden>● REC</span>
+      <button class="stage-btn" type="button" id="btnAnchorMode" data-model-action disabled aria-pressed="false" title="アンカー編集（E）">アンカー編集</button>
+      <button class="stage-btn" type="button" id="btnZoom" title="ホイールで拡大、ドラッグで移動。クリックで全体表示（F）">全体</button>
+      <span id="fps" aria-hidden="true"></span>
+    </div>
+    <div id="anchorHint" hidden>点をドラッグして基準位置を調整（矢印キーで1px・Shift+矢印で10px）。Esc または E で終了</div>
+    <div id="camPreview" hidden>
+      <canvas id="camCanvas" width="192" height="144" aria-label="カメラ映像のプレビュー"></canvas>
+      <button type="button" id="camPreviewClose" aria-label="カメラ映像を隠す" title="カメラ映像を隠す">✕</button>
+    </div>
     <div id="appStatus" role="status" aria-live="polite">PSDを読み込むと編集を始められます</div>
     <div id="drop">
       <div class="drop-symbol" aria-hidden="true">＋</div><p class="eyebrow">YOUR ART, IN MOTION</p>
       <h2>イラストに、動きを。</h2>
       <p>パーツ分けしたPSDをドロップ。<br>目・口・髪を読み取り、その場で動き出します。</p>
-      <p class="drop-hint">RGB / 8bit PSD・128MBまで<br>レイヤー名は face / eyewhite / mouth_open など。フォルダにも対応。</p>
-      <div class="btns" style="justify-content:center">
-        <button class="btn primary" id="btnFile">PSDファイルを選ぶ</button>
-        <button class="btn" data-sample="A" title="sample2.psd を読み込む">サンプルAを読み込む</button>
-        <button class="btn" data-sample="B" title="sample.psd を読み込む">サンプルBを読み込む</button>
-        <button class="btn" id="btnReadme2">READMEを読む</button>
+      <p class="drop-hint">RGB / 8bit PSD・128MBまで<br>レイヤー名は face / eyewhite / mouth_open や「顔・白目・前髪」など。フォルダにも対応。</p>
+      <div class="btns drop-actions">
+        <button class="btn primary" type="button" id="btnFile">PSDファイルを選ぶ</button>
+        <button class="btn" type="button" data-sample="A" title="sample2.psd を読み込む">サンプルAを読み込む</button>
+        <button class="btn" type="button" data-sample="B" title="sample.psd を読み込む">サンプルBを読み込む</button>
+        <button class="btn" type="button" id="btnReadme2">READMEを読む</button>
       </div>
+      <div class="progress" id="loadProgress" hidden><span></span></div>
       <p id="dropStatus"></p>
-      <button class="btn" id="btnCancelLoad" hidden>読み込みを中止</button>
-      <input type="file" id="fileInput" accept=".psd" style="display:none">
+      <button class="btn" type="button" id="btnCancelLoad" hidden>読み込みを中止</button>
+      <input type="file" id="fileInput" accept=".psd,.json,application/json" hidden>
     </div>
   </div>
   <div id="panel">
-    <div class="panel-head"><div><p class="eyebrow">WORKSPACE</p><h2>モデルを調整</h2></div><button class="btn compact" id="btnCollapse">すべて畳む</button></div>
+    <div class="panel-head"><div><p class="eyebrow">WORKSPACE</p><h2>モデルを調整</h2></div>
+      <div class="panel-head-actions"><button class="btn compact" type="button" id="btnShortcuts" title="キーボードショートカット（?）">ショートカット</button><button class="btn compact" type="button" id="btnCollapse">すべて畳む</button></div></div>
     <label class="search-box">設定を検索<input type="search" id="controlSearch" placeholder="目、髪、口、レイヤー…" autocomplete="off"></label>
     <p id="searchEmpty" hidden>一致する設定がありません</p>
-    <div class="sec"><h2>自動</h2>
+
+    <section class="sec" data-sec="auto"><h2>自動</h2>
       <div class="toggles">
-        <div class="tg on" id="tgIdle">アイドル</div>
-        <div class="tg on" id="tgBlink">自動まばたき</div>
-        <div class="tg on" id="tgRand">ランダム動作</div>
-        <div class="tg on" id="tgTalk">ランダム口パク</div>
-        <div class="tg" id="tgCam">カメラ追従</div>
-        <div class="tg" id="tgMouse">マウス追従</div>
-        <div class="tg" id="tgMic">マイク口パク</div>
-        <div class="tg on" id="tgPhys">髪の物理</div>
+        <button type="button" class="tg on" id="tgIdle">アイドル</button>
+        <button type="button" class="tg on" id="tgBlink">自動まばたき</button>
+        <button type="button" class="tg on" id="tgRand">ランダム動作</button>
+        <button type="button" class="tg on" id="tgTalk">ランダム口パク</button>
+        <button type="button" class="tg" id="tgCam">カメラ追従</button>
+        <button type="button" class="tg" id="tgMouse">マウス追従</button>
+        <button type="button" class="tg" id="tgMic">マイク口パク</button>
+        <button type="button" class="tg on" id="tgPhys">髪の物理</button>
       </div>
-    </div>
-    <div class="sec"><h2>表情プリセット</h2>
-      <div class="btns">
-        <button class="btn" data-preset="neutral">通常</button>
-        <button class="btn" data-preset="smile">笑顔</button>
-        <button class="btn" data-preset="usume">薄目</button>
-        <button class="btn" data-preset="surprise">驚き</button>
-        <button class="btn" data-preset="jito">ジト目</button>
-        <button class="btn" data-preset="winkL">ウインク左</button>
-        <button class="btn" data-preset="winkR">ウインク右</button>
+    </section>
+    <section class="sec" data-sec="preset"><h2>表情プリセット</h2>
+      <div class="btns presets">
+        <button class="btn" type="button" data-preset="neutral">通常<kbd>1</kbd></button>
+        <button class="btn" type="button" data-preset="smile">笑顔<kbd>2</kbd></button>
+        <button class="btn" type="button" data-preset="usume">薄目<kbd>3</kbd></button>
+        <button class="btn" type="button" data-preset="surprise">驚き<kbd>4</kbd></button>
+        <button class="btn" type="button" data-preset="jito">ジト目<kbd>5</kbd></button>
+        <button class="btn" type="button" data-preset="winkL">ウインク左<kbd>6</kbd></button>
+        <button class="btn" type="button" data-preset="winkR">ウインク右<kbd>7</kbd></button>
       </div>
-    </div>
-    <div class="sec"><h2>顔の向き</h2>
+      <p class="section-hint">同じボタンかキーをもう一度押すと解除。<kbd>0</kbd> で解除。</p>
+    </section>
+    <section class="sec" data-sec="head"><h2>顔の向き</h2>
       <div class="row"><label>角度 X</label><input type="range" id="pAngleX" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>角度 Y</label><input type="range" id="pAngleY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>角度 Z</label><input type="range" id="pAngleZ" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
-    </div>
-    <div class="sec"><h2>目</h2>
+    </section>
+    <section class="sec" data-sec="eyes"><h2>目</h2>
       <div class="row"><label>左目の開き</label><input type="range" id="pEyeL" min="0" max="1" step="0.01" value="1"><span class="val"></span></div>
       <div class="row"><label>右目の開き</label><input type="range" id="pEyeR" min="0" max="1" step="0.01" value="1"><span class="val"></span></div>
       <div class="row"><label>視線 X</label><input type="range" id="pEyeX" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>視線 Y</label><input type="range" id="pEyeY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>瞳スケール</label><input type="range" id="pIrisScale" min="0.5" max="1.3" step="0.01" value="1"><span class="val"></span></div>
-      <div class="row"><label>閉じ目ｽｹｰﾙ左</label><input type="range" id="pEyeScaleL" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
-      <div class="row"><label>閉じ目ｽｹｰﾙ右</label><input type="range" id="pEyeScaleR" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>閉じ目スケール左</label><input type="range" id="pEyeScaleL" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
+      <div class="row"><label>閉じ目スケール右</label><input type="range" id="pEyeScaleR" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
       <div class="row"><label>閉じやすさ</label><input type="range" id="pEyeEase" min="0" max="1" step="0.01" value="0.3"><span class="val"></span></div>
       <div class="row"><label>差分 上下</label><input type="range" id="pEyeCY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>差分 角度</label><input type="range" id="pEyeCAng" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
-      </div>
-    <div class="sec"><h2>眉</h2>
+    </section>
+    <section class="sec" data-sec="brow"><h2>眉</h2>
       <div class="row"><label>眉（上下）</label><input type="range" id="pBrow" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>眉角度 対称</label><input type="range" id="pBrowAngSym" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>眉角度 左</label><input type="range" id="pBrowAngL" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>眉角度 右</label><input type="range" id="pBrowAngR" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
-    </div>
-    <div class="sec"><h2>口</h2>
+    </section>
+    <section class="sec" data-sec="mouth"><h2>口</h2>
       <div class="row"><label>開き</label><input type="range" id="pMouthOpen" min="0" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>形（笑い）</label><input type="range" id="pMouthForm" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>閉じ口 上下</label><input type="range" id="pMouthCY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>閉じやすさ</label><input type="range" id="pMouthEase" min="0" max="1" step="0.01" value="0.72"><span class="val"></span></div>
       <div class="row"><label>閉じ口 角度</label><input type="range" id="pMouthCAng" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>口スケール</label><input type="range" id="pMouthScale" min="0.5" max="1.5" step="0.01" value="1"><span class="val"></span></div>
-    </div>
-    <div class="sec"><h2>前髪</h2>
+    </section>
+    <section class="sec" data-sec="bangs"><h2>前髪</h2>
       <div class="row"><label>揺れ</label><input type="range" id="pFhAmp" min="0" max="3" step="0.01" value="2"><span class="val"></span></div>
       <div class="row"><label>柔らかさ</label><input type="range" id="pFhSoft" min="0" max="2" step="0.01" value="0.4"><span class="val"></span></div>
       <div class="row"><label>ブロック左</label><input type="range" id="pBangL" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>ブロック中央</label><input type="range" id="pBangC" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>ブロック右</label><input type="range" id="pBangR" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
-    </div>
-    <div class="sec"><h2>体・物理</h2>
+    </section>
+    <section class="sec" data-sec="body"><h2>体・物理</h2>
       <div class="row"><label>体の傾き</label><input type="range" id="pBody" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>腕の高さ</label><input type="range" id="pArmY" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
       <div class="row"><label>腕位置補正</label><input type="range" id="pArmPos" min="-1" max="1" step="0.01" value="0"><span class="val"></span></div>
@@ -111,39 +142,95 @@
       <div class="row"><label>胸位置 上下</label><input type="range" id="pBustY" min="-3" max="3" step="0.01" value="1"><span class="val"></span></div>
       <div class="row"><label>後髪の揺れ</label><input type="range" id="pPhysAmp" min="0" max="3" step="0.01" value="2"><span class="val"></span></div>
       <div class="row"><label>後髪柔らかさ</label><input type="range" id="pSoft" min="0" max="3" step="0.01" value="2"><span class="val"></span></div>
-    </div>
-    <div class="sec"><h2>ユーティリティ</h2>
+      <div class="row"><label>小物の揺れ</label><input type="range" id="pAccAmp" min="0" max="3" step="0.01" value="1"><span class="val"></span></div>
+    </section>
+    <section class="sec" data-sec="anchors"><h2>アンカー（基準点）</h2>
+      <p class="section-hint">目・口・首などの自動検出位置がずれているときに、プレビュー上でドラッグして直せます。</p>
       <div class="btns">
-        <button class="btn" id="btnReset">数値リセット</button>
-        <button class="btn" id="btnSavePsd" data-model-action disabled>軽量PSDを保存</button>
-        <button class="btn" id="btnSaveSettings" data-model-action disabled>調整を保存</button>
-        <button class="btn" id="btnRestoreSettings" data-model-action disabled>保存状態に戻す</button>
-        <button class="btn" id="btnExportSettings" data-model-action disabled>設定JSONを書き出す</button>
-        <button class="btn" id="btnImportSettings" data-model-action disabled>設定JSONを読み込む</button>
+        <button class="btn" type="button" id="btnAnchorMode2" data-model-action disabled aria-pressed="false">アンカーを編集<kbd>E</kbd></button>
+        <button class="btn" type="button" id="btnResetAnchors" data-model-action disabled>自動検出の位置に戻す</button>
       </div>
-      <p class="section-hint">調整はこのブラウザにモデル別で保存。別の環境へはJSONで持ち出せます。</p>
+      <p class="section-hint" id="anchorSummary"></p>
+    </section>
+    <section class="sec" data-sec="tracking"><h2>カメラ・マイク</h2>
+      <p class="section-hint">カメラ追従は顔のランドマークから、頭の向き・まばたき・視線・口・眉・笑顔を読み取ります。</p>
+      <div class="btns">
+        <button class="btn" type="button" id="btnCalibrate" disabled title="カメラ追従中に、正面を向いて自然な表情で押してください">正面を記録（キャリブレーション）</button>
+        <button class="btn" type="button" id="btnClearCalibration" disabled>記録を消す</button>
+      </div>
+      <p class="section-hint" id="calibrationStatus">未記録（標準の顔の比率で判定します）</p>
+      <label class="check-row"><input type="checkbox" id="prefLinkEyes"> 左右のまばたきを連動（オフでウインクを検出）</label>
+      <label class="check-row"><input type="checkbox" id="prefTrackBrow"> 眉を追跡</label>
+      <label class="check-row"><input type="checkbox" id="prefTrackSmile"> 笑顔（口の形）を追跡</label>
+      <label class="check-row"><input type="checkbox" id="prefCamPreview"> カメラ映像を小さく表示</label>
+      <div class="row"><label>頭の感度</label><input type="range" id="prefHeadGain" min="0.3" max="2" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>まばたき感度</label><input type="range" id="prefEyeGain" min="0.5" max="2" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>口の感度</label><input type="range" id="prefMouthGain" min="0.5" max="2.5" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>眉の感度</label><input type="range" id="prefBrowGain" min="0" max="2" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>視線の感度</label><input type="range" id="prefGazeGain" min="0" max="2" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>なめらかさ</label><input type="range" id="prefSmoothing" min="0" max="1" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>マイク感度</label><input type="range" id="prefMicGain" min="0.25" max="4" step="0.01"><span class="val"></span></div>
+      <div class="row"><label>ノイズゲート</label><input type="range" id="prefMicGate" min="0" max="0.5" step="0.01"><span class="val"></span></div>
+      <div class="meter" id="micMeter" title="マイク入力（線はノイズゲート）"><span class="meter-level"></span><span class="meter-gate"></span></div>
+    </section>
+    <section class="sec" data-sec="obs"><h2>OBS連携</h2>
+      <p class="section-hint" id="obsStatus">start_obs.bat（obs_server.py）で開くと、このブラウザで開いたPSD・調整・表情がOBSへ自動で反映されます。</p>
+      <label class="check-row"><input type="checkbox" id="prefObsSync"> OBS表示へ同期する</label>
+      <div class="copy-row"><input type="text" id="obsUrl" readonly aria-label="OBSのブラウザソースURL"><button class="btn compact" type="button" id="btnCopyObsUrl">コピー</button></div>
+      <p class="section-hint">OBSの「ブラウザ」ソースに上のURLを設定します。幅・高さはPSDのサイズに合わせてください。</p>
+    </section>
+    <section class="sec" data-sec="export"><h2>書き出し</h2>
+      <div class="field-row"><label for="prefExportBg">背景</label><select id="prefExportBg"><option value="transparent">透過</option><option value="green">グリーンバック</option><option value="dark">ダーク</option></select></div>
+      <div class="field-row"><label for="prefRecSeconds">録画の長さ</label><select id="prefRecSeconds"><option value="3">3秒</option><option value="5">5秒</option><option value="10">10秒</option><option value="15">15秒</option><option value="30">30秒</option><option value="60">60秒</option></select></div>
+      <div class="field-row"><label for="prefRecFps">フレームレート</label><select id="prefRecFps"><option value="30">30fps</option><option value="60">60fps</option></select></div>
+      <div class="field-row"><label for="prefRecFormat">形式</label><select id="prefRecFormat"></select></div>
+      <div class="btns">
+        <button class="btn" type="button" id="btnPng2" data-model-action disabled>PNGを保存</button>
+        <button class="btn" type="button" id="btnRecord2" data-model-action disabled>録画を開始</button>
+      </div>
+      <p class="section-hint" id="recordStatus">動画は元のPSDサイズで書き出します。透過はWebM（Chrome / Edge）で保持されます。</p>
+    </section>
+    <section class="sec" data-sec="save"><h2>保存・設定</h2>
+      <div class="btns">
+        <button class="btn" type="button" id="btnSaveSettings" data-model-action disabled title="このブラウザに保存（Ctrl+S）">調整を保存</button>
+        <button class="btn" type="button" id="btnRestoreSettings" data-model-action disabled>保存状態に戻す</button>
+        <button class="btn" type="button" id="btnExportSettings" data-model-action disabled>設定JSONを書き出す</button>
+        <button class="btn" type="button" id="btnImportSettings" data-model-action disabled>設定JSONを読み込む</button>
+        <button class="btn" type="button" id="btnReset">数値リセット</button>
+        <button class="btn" type="button" id="btnSavePsd" data-model-action disabled>軽量PSDを保存</button>
+      </div>
+      <p class="section-hint">調整はこのブラウザにモデル別で保存。別の環境へはJSONで持ち出せます（JSONはプレビューにドロップしても読み込めます）。</p>
       <input type="file" id="settingsInput" accept=".json,application/json" hidden>
       <div id="utilStatus" role="status" aria-live="polite"></div>
-    </div>
-    <div class="sec"><h2>背景</h2>
+    </section>
+    <section class="sec" data-sec="background"><h2>背景</h2>
       <div class="btns">
-        <button class="btn" data-bg="checker">透過</button>
-        <button class="btn" data-bg="green">GB</button>
-        <button class="btn" data-bg="dark">ダーク</button>
+        <button class="btn" type="button" data-bg="checker">透過</button>
+        <button class="btn" type="button" data-bg="green">GB</button>
+        <button class="btn" type="button" data-bg="dark">ダーク</button>
       </div>
-    </div>
-    <div class="sec"><h2>レイヤー</h2><p class="section-hint">上が奥、下が手前。表示・濃さ・奥行きを調整できます。</p><button class="btn compact" id="btnResetLayers" data-model-action disabled>レイヤー設定を初期化</button><div id="layers"><p class="section-hint">PSDの読み込み後に表示されます</p></div></div>
-    <div class="sec"><h2>モデル情報</h2><div id="rigInfo">モデル未読込</div></div>
+    </section>
+    <section class="sec" data-sec="layers"><h2>レイヤー</h2><p class="section-hint">上が奥、下が手前。ドラッグか ↑↓ で並べ替え、▸ で濃さ・奥行きを調整します。</p><button class="btn compact" type="button" id="btnResetLayers" data-model-action disabled>レイヤー設定を初期化</button><div id="layers"><p class="section-hint">PSDの読み込み後に表示されます</p></div></section>
+    <section class="sec" data-sec="info"><h2>モデル情報・診断</h2><div id="rigInfo">モデル未読込</div><ul id="diagnostics"></ul></section>
   </div>
 </div>
-<div id="readmeOverlay" role="dialog" aria-modal="true" aria-labelledby="readmeTitle"><div id="readmeWin">
-  <div id="readmeHead"><b id="readmeTitle">使い方</b><button class="btn" id="readmeClose" aria-label="使い方を閉じる">✕</button></div>
-  <div id="readmeBody"></div>
+<div class="overlay-dialog" id="readmeOverlay" role="dialog" aria-modal="true" aria-labelledby="readmeTitle"><div class="dialog-win">
+  <div class="dialog-head"><b id="readmeTitle">使い方</b><button class="btn" type="button" id="readmeClose" aria-label="使い方を閉じる">✕</button></div>
+  <div class="dialog-body" id="readmeBody"></div>
+</div></div>
+<div class="overlay-dialog" id="shortcutOverlay" role="dialog" aria-modal="true" aria-labelledby="shortcutTitle"><div class="dialog-win narrow">
+  <div class="dialog-head"><b id="shortcutTitle">キーボードショートカット</b><button class="btn" type="button" id="shortcutClose" aria-label="ショートカットを閉じる">✕</button></div>
+  <div class="dialog-body"><table class="shortcut-table" id="shortcutTable"></table></div>
 </div></div>
 <script src="lib/ag-psd.min.js"></script>
 <script src="lib/rigger.js"></script>
 <script src="lib/genericparts.js"></script>
 <script src="lib/runtime.js"></script>
+<script src="lib/face-features.js"></script>
+<script src="lib/renderer.js"></script>
+<script src="lib/devices.js"></script>
+<script src="lib/recorder.js"></script>
+<script src="lib/obs-sync.js"></script>
 <script src="lib/app.js"></script>
 </body>
 </html>

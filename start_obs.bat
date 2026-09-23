@@ -23,7 +23,9 @@ echo Or set ANIME25D_PYTHON to the full path of an existing python.exe.
 pause
 exit /b 1
 :started
-echo OBS Browser Source URL: http://127.0.0.1:8000/?obs=1^&cam=1
-echo Allow camera access in the opened browser window and keep it open.
+echo OBS Browser Source URL: http://127.0.0.1:8000/?obs=1
+echo.
+echo The PSD, settings and expressions you use in the opened browser are mirrored to OBS.
+echo Allow camera access in the opened browser window and keep it open (do not minimize it).
 echo Keep the server window running while OBS is using the avatar.
 pause

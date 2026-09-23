@@ -1,0 +1,17 @@
+{
+  "name": "anime25drig",
+  "version": "2.0.0",
+  "private": true,
+  "description": "パーツ分けPSDをドロップするだけで動く2.5Dアバターツール",
+  "license": "MIT",
+  "scripts": {
+    "start": "python obs_server.py --port 8000",
+    "test": "npm run test:node && npm run test:python",
+    "test:node": "node tests/rigger.test.js && node tests/runtime.test.js && node tests/face-features.test.js && node tests/psd.test.js",
+    "test:python": "python -m unittest discover -s tests -p \"test_*.py\"",
+    "test:browser": "node tests/run-browser.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -20,4 +20,28 @@ const cleaned=RT.settings(settings,'test',{angleX:[-1,1]},['a']);assert.equal(cl
 assert.throws(()=>RT.settings(settings,'other',{angleX:[-1,1]},['a']),/別のPSD/);
 assert.throws(()=>RT.settings({...settings,params:{angleX:Infinity}},'test',{angleX:[-1,1]},['a']),/数値/);
 assert.throws(()=>RT.settings({...settings,layers:[settings.layers[0],settings.layers[0]]},'test',{angleX:[-1,1]},['a','b']),/レイヤー/);
-console.log('runtime tests: validation, settings, mesh limits, physics passed');
+// Optional tracking channels (brow, mouth form, microphone) are validated when present.
+assert.equal(RT.tracking({...camera,br:3}).br,1);assert.equal(RT.tracking({...camera,mic:'x'}),null);
+assert.equal(RT.tracking({...camera}).br,undefined);assert.equal(RT.tracking(null),null);
+// Version 1 files still load; missing parameters fall back to defaults; unknown layers are skipped.
+const lenient=RT.settings({...settings,params:{}},'test',{angleX:[-1,1],bust:[0,4]},['a','b'],{angleX:0,bust:2.5});
+assert.equal(lenient.params.bust,2.5);assert.equal(lenient.missingLayers,1);
+const v2=RT.settings({...settings,version:2,layers:[...settings.layers,{id:'gone',visible:true,opacity:1,depth:1}],anchors:{eyeL:{dx:3,dy:-2},eyeLClose:{dx:9,dy:4},mouth:{dy:1e9},bogus:{dx:1}}},'test',{angleX:[-1,1]},['a'],{},{anchorLimit:500});
+assert.equal(v2.unknownLayers,1);assert.deepEqual(v2.anchors,{eyeL:{dx:3,dy:-2},eyeLClose:{dy:4},mouth:{dy:500}});
+assert.throws(()=>RT.anchors({eyeL:{dx:NaN}}),/アンカー/);assert.throws(()=>RT.anchors([1]),/アンカー/);
+assert.throws(()=>RT.settings({...settings,version:3},'test',{},['a']),/対応/);
+assert.equal(RT.settings(settings,'other',{angleX:[-1,1]},['a'],{}, {anyModel:true}).params.angleX,0.4);
+assert.deepEqual(RT.mergeLayerOrder(['a','b','c','d'],['c','a','x']),['c','d','a','b']);
+assert.deepEqual(RT.mergeLayerOrder(['a','b','c'],['c','a']),['c','a','b']);
+assert.deepEqual(RT.mergeLayerOrder(['a','b','c'],['c','b']),['a','c','b']);
+// Preferences: unknown keys dropped, numbers clamped, enums checked.
+assert.deepEqual(RT.prefs({gain:9,link:'x',mode:'b',junk:1},{gain:[0,2,1],link:['bool',true],mode:['enum',['a','b'],'a']}),{gain:2,link:true,mode:'b'});
+// Undo history.
+const h=RT.createHistory(3);h.reset('0');h.push('1');h.push('1');h.push('2');h.push('3');
+assert.equal(h.size,3);assert.equal(h.undo(),'2');assert.equal(h.undo(),'1');assert.equal(h.undo(),null);
+assert.equal(h.redo(),'2');h.push('x');assert.equal(h.canRedo,false);assert.equal(h.current(),'x');
+// Relative paths for ?model= must stay inside the served folder.
+assert.equal(RT.safeRelativePath('models/my model.psd','.psd'),'models/my model.psd');
+for(const bad of ['../x.psd','/etc/x.psd','https://evil/x.psd','a//b.psd','x.json','C:\\x.psd','./x.psd'])assert.equal(RT.safeRelativePath(bad,'.psd'),null,bad);
+assert.equal(RT.safeFileName('キャラ<1>.psd'),'キャラ_1_');
+console.log('runtime tests: validation, settings v1/v2, anchors, history, prefs, mesh limits, physics passed');

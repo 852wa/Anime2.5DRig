@@ -78,4 +78,35 @@ assert.equal(enlarged[6],0);
 const composite=Rigger.flattenPsdToImg({width:2,height:2,children:[{name:'red',left:0,top:0,imageData:{width:1,height:1,data:new Uint8ClampedArray([255,0,0,128])}}]});
 assert.deepEqual([...composite.data],[255,0,0,128]);
 
-console.log('rigger tests: 16 scenarios passed');
+// Japanese names, see-through variants and numbered parts resolve to slots.
+const aliasCases = {
+  '前髪': 'front hair', '前髪2': 'front hair_2', 'Front_Hair': 'front hair', 'front hair 1': 'front hair_1',
+  '後ろ髪': 'back hair', '白目': 'eyewhite', '瞳': 'irides', 'まつ毛': 'eyelash', '眉毛': 'eyebrow',
+  '閉じ目': 'eye_close', '閉じ目2': 'eye_close2', 'eye_close_2': 'eye_close_2', 'eyeclose2': 'eye_close2',
+  '閉じ口': 'mouth_close', '口': 'mouth_open', '顔 のコピー': 'face', 'face copy 2': 'face',
+  'bottom wear': 'bottomwear', 'メガネ': 'eyewear', 'しっぽ': 'tail', 'ピアス': 'earwear', 'layer 12': 'layer 12'
+};
+for (const [raw, expected] of Object.entries(aliasCases)) assert.strictEqual(Rigger.normName(raw), expected, raw);
+
+// Plain "hair" is front hair above the face and back hair below it.
+const hairRig = Rigger.buildRig({ width: 200, height: 200, children: [
+  solidLayer('hair', 40, 10, 120, 170), solidLayer('face', 60, 30, 80, 90), solidLayer('hair', 50, 20, 100, 40)
+] });
+assert.deepStrictEqual(hairRig.layers.map(l => l.name), ['back hair', 'face', 'front hair']);
+assert.ok(hairRig.layers[2].strands.length > 0, 'front hair gets strands');
+assert.strictEqual(hairRig.layers[1].source, 'face');
+
+// Earrings and tails swing; unknown names are reported but still follow a group.
+const accRig = Rigger.buildRig({ width: 300, height: 300, children: [
+  solidLayer('face', 90, 40, 120, 130), solidLayer('ピアス', 80, 120, 10, 40), solidLayer('earwear', 210, 120, 10, 40),
+  solidLayer('tail', 20, 180, 40, 100), solidLayer('mystery', 100, 250, 20, 20)
+] });
+const ear = accRig.layers.filter(l => l.name === 'earwear');
+assert.strictEqual(ear.length, 2);
+assert.ok(ear.every(l => l.phys === 'sway' && l.strands.length >= 1));
+assert.strictEqual(accRig.layers.find(l => l.name === 'tail').phys, 'sway');
+const mystery = accRig.layers.find(l => l.name === 'mystery');
+assert.ok(mystery.unknown && mystery.group === 'body');
+assert.strictEqual(Rigger.roleLabel('front hair'), '前髪');
+
+console.log('rigger tests: 20 scenarios passed');
